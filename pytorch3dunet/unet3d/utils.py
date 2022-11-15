@@ -1,3 +1,4 @@
+from typing import List
 import importlib
 import logging
 import os
@@ -167,7 +168,7 @@ def remove_halo(patch, index, shape, patch_halo):
     return patch[patch_index], index
 
 
-def number_of_features_per_level(init_channel_number, num_levels):
+def number_of_features_per_level(init_channel_number, num_levels) -> List[int]:
     return [init_channel_number * 2 ** k for k in range(num_levels)]
 
 

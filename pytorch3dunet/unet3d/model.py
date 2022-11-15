@@ -34,13 +34,14 @@ class Abstract3DUNet(nn.Module):
         conv_kernel_size (int or tuple): size of the convolving kernel in the basic_module
         pool_kernel_size (int or tuple): the size of the window
         conv_padding (int or tuple): add zero-padding added to all three sides of the input
+        upsample_mode (str): upsampling mode, one of 'nearest', 'linear', 'bilinear', 'trilinear', 'area'
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
                  final_sigmoid: bool,
-                 basic_module: nn.Module,
+                 basic_module: type(nn.Module),
                  f_maps: int = 64,
                  layer_order: str = "gcr",
                  num_groups: int = 8,
@@ -48,7 +49,8 @@ class Abstract3DUNet(nn.Module):
                  is_segmentation: bool = True,
                  conv_kernel_size: Union[int, Tuple[int, int, int]] = 3,
                  pool_kernel_size: Union[int, Tuple[int, int, int]] = 2,
-                 conv_padding: Union[int, Tuple[int, int, int]] = 1,
+                 conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
+                 upsample_mode: str = "nearest",
                  **kwargs: Any):
         super().__init__()
 
@@ -75,6 +77,7 @@ class Abstract3DUNet(nn.Module):
                                         conv_padding,
                                         layer_order,
                                         num_groups,
+                                        upsample_mode,
                                         upsample=True)
 
         # in the last layer a 1×1 convolution reduces the number of output
@@ -136,7 +139,7 @@ class UNet3D(Abstract3DUNet):
                  num_groups: int = 8,
                  num_levels: int = 4,
                  is_segmentation: bool = True,
-                 conv_padding: Union[int, Tuple[int, int, int]] = 1,
+                 conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  **kwargs: Any):
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
@@ -168,7 +171,7 @@ class ResidualUNet3D(Abstract3DUNet):
                  num_groups: int = 8,
                  num_levels: int = 5,
                  is_segmentation: bool = True,
-                 conv_padding: Union[int, Tuple[int, int, int]] = 1,
+                 conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  **kwargs: Any):
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
@@ -197,7 +200,7 @@ class UNet2D(Abstract3DUNet):
                  num_groups: int = 8,
                  num_levels: int = 4,
                  is_segmentation: bool = True,
-                 conv_padding: Union[int, Tuple[int, int, int]] = 1,
+                 conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  **kwargs: Any):
         if conv_padding == 1:
             conv_padding = (0, 1, 1)
