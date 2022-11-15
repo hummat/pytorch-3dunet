@@ -51,6 +51,8 @@ def create_conv(in_channels: int,
             modules.append(('LeakyReLU', nn.LeakyReLU(inplace=True)))
         elif char == 'e':
             modules.append(('ELU', nn.ELU(inplace=True)))
+        elif char == 'k':
+            modules.append(('GELU', nn.GELU()))
         elif char == 'c':
             # add learnable bias only in the absence of batchnorm/groupnorm
             bias = not ('g' in order or 'b' in order)
