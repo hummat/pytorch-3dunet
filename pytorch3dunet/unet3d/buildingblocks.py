@@ -257,9 +257,18 @@ class Decoder(nn.Module):
         upsample (boole): should the input be upsampled
     """
 
-    def __init__(self, in_channels, out_channels, conv_kernel_size=3, scale_factor=(2, 2, 2), basic_module=DoubleConv,
-                 conv_layer_order='gcr', num_groups=8, mode='nearest', padding=1, upsample=True):
-        super(Decoder, self).__init__()
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 conv_kernel_size=3,
+                 scale_factor=(2, 2, 2),
+                 basic_module=DoubleConv,
+                 conv_layer_order='gcr',
+                 num_groups=8,
+                 mode='nearest',
+                 padding=1,
+                 upsample=True):
+        super().__init__()
 
         if upsample:
             if basic_module == DoubleConv:
@@ -302,7 +311,13 @@ class Decoder(nn.Module):
             return encoder_features + x
 
 
-def create_encoders(in_channels, f_maps, basic_module, conv_kernel_size, conv_padding, layer_order, num_groups,
+def create_encoders(in_channels,
+                    f_maps,
+                    basic_module,
+                    conv_kernel_size,
+                    conv_padding,
+                    layer_order,
+                    num_groups,
                     pool_kernel_size):
     # create encoder path consisting of Encoder modules. Depth of the encoder is equal to `len(f_maps)`
     encoders = []
