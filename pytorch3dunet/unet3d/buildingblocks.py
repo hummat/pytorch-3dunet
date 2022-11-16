@@ -76,14 +76,14 @@ def create_conv(in_channels: int,
                 if char == 'b':
                     modules.append(('batchnorm', nn.BatchNorm3d(in_channels)))
                 elif char == 'i':
-                    modules.append(('instancenorm', nn.InstanceNorm3d(in_channels)))
+                    modules.append(('instancenorm', nn.InstanceNorm3d(in_channels, affine=True)))
                 if char == 'l':
                     modules.append(('layernorm', nn.LayerNorm(in_channels)))
             else:
                 if char == 'b':
                     modules.append(('batchnorm', nn.BatchNorm3d(out_channels)))
                 elif char == 'i':
-                    modules.append(('instancenorm', nn.InstanceNorm3d(out_channels)))
+                    modules.append(('instancenorm', nn.InstanceNorm3d(out_channels, affine=True)))
                 if char == 'l':
                     modules.append(('layernorm', nn.LayerNorm(out_channels)))
         elif char == 'd':
