@@ -41,21 +41,21 @@ def create_conv(in_channels: int,
         list of tuple (name, module)
     """
     assert 'c' in order, "Conv layer MUST be present"
-    assert order[0] not in 'rle', 'Non-linearity cannot be the first operation in the layer'
+    assert order[0] not in 'rlek', 'Non-linearity cannot be the first operation in the layer'
 
     modules = []
     for i, char in enumerate(order):
         if char == 'r':
             modules.append(('ReLU', nn.ReLU(inplace=True)))
-        elif char == 'l':
+        elif char == 'y':
             modules.append(('LeakyReLU', nn.LeakyReLU(inplace=True)))
         elif char == 'e':
             modules.append(('ELU', nn.ELU(inplace=True)))
         elif char == 'k':
             modules.append(('GELU', nn.GELU()))
         elif char == 'c':
-            # add learnable bias only in the absence of batchnorm/groupnorm
-            bias = not ('g' in order or 'b' in order)
+            # add learnable bias only in the absence of normalization
+            bias = any(c in order for c in "gbil")
             modules.append(('conv', conv3d(in_channels, out_channels, kernel_size, bias, padding=padding)))
         elif char == 'g':
             is_before_conv = i < order.index('c')
@@ -70,14 +70,24 @@ def create_conv(in_channels: int,
 
             assert num_channels % num_groups == 0, f'Expected number of channels in input to be divisible by num_groups. num_channels={num_channels}, num_groups={num_groups}'
             modules.append(('groupnorm', nn.GroupNorm(num_groups=num_groups, num_channels=num_channels)))
-        elif char == 'b':
+        elif char in 'bil':
             is_before_conv = i < order.index('c')
             if is_before_conv:
-                modules.append(('batchnorm', nn.BatchNorm3d(in_channels)))
+                if char == 'b':
+                    modules.append(('batchnorm', nn.BatchNorm3d(in_channels)))
+                elif char == 'i':
+                    modules.append(('instancenorm', nn.InstanceNorm3d(in_channels)))
+                if char == 'l':
+                    modules.append(('layernorm', nn.LayerNorm(in_channels)))
             else:
-                modules.append(('batchnorm', nn.BatchNorm3d(out_channels)))
+                if char == 'b':
+                    modules.append(('batchnorm', nn.BatchNorm3d(out_channels)))
+                elif char == 'i':
+                    modules.append(('instancenorm', nn.InstanceNorm3d(out_channels)))
+                if char == 'l':
+                    modules.append(('layernorm', nn.LayerNorm(out_channels)))
         else:
-            raise ValueError(f"Unsupported layer type '{char}'. MUST be one of ['b', 'g', 'r', 'l', 'e', 'c']")
+            raise ValueError(f"Unsupported layer type '{char}'. MUST be one of ['g', 'b', 'i', 'l', 'r', 'y', 'e', 'k', 'c']")
 
     return modules
 
