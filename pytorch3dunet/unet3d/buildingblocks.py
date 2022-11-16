@@ -55,7 +55,7 @@ def create_conv(in_channels: int,
             modules.append(('GELU', nn.GELU()))
         elif char == 'c':
             # add learnable bias only in the absence of normalization
-            bias = any(c in order for c in "gbil")
+            bias = not any(c in order for c in "gbil")
             modules.append(('conv', conv3d(in_channels, out_channels, kernel_size, bias, padding=padding)))
         elif char == 'g':
             is_before_conv = i < order.index('c')
@@ -86,8 +86,10 @@ def create_conv(in_channels: int,
                     modules.append(('instancenorm', nn.InstanceNorm3d(out_channels)))
                 if char == 'l':
                     modules.append(('layernorm', nn.LayerNorm(out_channels)))
+        elif char == 'd':
+            modules.append(('dropout', nn.Dropout3d(p=0.1, inplace=True)))
         else:
-            raise ValueError(f"Unsupported layer type '{char}'. MUST be one of ['g', 'b', 'i', 'l', 'r', 'y', 'e', 'k', 'c']")
+            raise ValueError(f"Unsupported layer type '{char}'. MUST be one of ['g', 'b', 'i', 'l', 'r', 'y', 'e', 'k', 'c', 'd']")
 
     return modules
 
