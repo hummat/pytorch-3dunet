@@ -249,12 +249,12 @@ class AttentionBlock(nn.Module):
                  out_channels: int):
         super().__init__()
 
-        self.W_g = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+        self.W_g = nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
 
-        self.W_x = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+        self.W_x = nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
 
         self.psi = nn.Sequential(
-            nn.Conv2d(out_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.Conv3d(out_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
             nn.Sigmoid()
         )
 
