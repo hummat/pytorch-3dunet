@@ -244,29 +244,24 @@ class ExtResNetBlock(nn.Module):
 
 
 class AttentionBlock(nn.Module):
-    def __init__(self,
-                 in_channels: int,
-                 out_channels: int):
+    def __init__(self, out_channels: int):
         super().__init__()
 
-        self.W_g = nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
-
-        self.W_x = nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
-
+        self.W_gate = nn.Conv3d(2 * out_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+        self.W_feat = nn.Conv3d(out_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
         self.psi = nn.Sequential(
-            nn.Conv3d(out_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
-            nn.Sigmoid()
-        )
-
+                nn.Conv3d(out_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
+                nn.Sigmoid()
+            )
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, g: Tensor, x: Tensor) -> Tensor:
-        g = self.W_g(g)
-        x = self.W_x(x)
-        psi = self.relu(g + x)
+    def forward(self, gate: Tensor, feature: Tensor) -> Tensor:
+        gate = self.W_gate(gate)
+        feature = self.W_feat(feature)
+        psi = self.relu(gate + feature)
         psi = self.psi(psi)
 
-        return x * psi
+        return feature * psi
 
 
 class Encoder(nn.Module):
@@ -383,22 +378,23 @@ class Decoder(nn.Module):
             # concat joining
             self.joining = partial(self._joining, concat=True)
 
-        if attention:
-            self.attention = AttentionBlock(in_channels, in_channels)
-        else:
-            self.attention = nn.Identity()
+            if attention:
+                self.attention = AttentionBlock(out_channels)
+            else:
+                self.attention = None
 
-        self.basic_module = basic_module(in_channels,
-                                         out_channels,
-                                         encoder=False,
-                                         kernel_size=conv_kernel_size,
-                                         order=conv_layer_order,
-                                         num_groups=num_groups,
-                                         padding=padding)
+            self.basic_module = basic_module(in_channels,
+                                             out_channels,
+                                             encoder=False,
+                                             kernel_size=conv_kernel_size,
+                                             order=conv_layer_order,
+                                             num_groups=num_groups,
+                                             padding=padding)
 
     def forward(self, encoder_features, x):
         x = self.upsampling(encoder_features=encoder_features, x=x)
-        x = self.attention(g=x, x=encoder_features)
+        if self.attention is not None:
+            encoder_features = self.attention(gate=x, feature=encoder_features)
         x = self.joining(encoder_features, x)
         x = self.basic_module(x)
         return x
