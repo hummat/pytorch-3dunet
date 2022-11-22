@@ -257,11 +257,13 @@ class ExtResNetBlock(nn.Module):
 
 
 class AttentionBlock(nn.Module):
+    """Following the paper: https://arxiv.org/pdf/1804.03999.pdf"""
+
     def __init__(self, out_channels: int):
         super().__init__()
 
         self.W_gate = nn.Conv3d(2 * out_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
-        self.W_feat = nn.Conv3d(out_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+        self.W_feat = nn.Conv3d(out_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
         self.psi = nn.Sequential(
                 nn.Conv3d(out_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
                 nn.Sigmoid()
