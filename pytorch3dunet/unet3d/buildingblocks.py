@@ -6,20 +6,13 @@ from torch import nn, Tensor
 from torch.nn import functional as F
 
 
-def conv3d(in_channels: int,
-           out_channels: int,
-           kernel_size: Union[int, Tuple[int, int, int]],
-           bias: bool,
-           padding: Union[str, int, Tuple[int, int, int]]) -> nn.Conv3d:
-    return nn.Conv3d(in_channels, out_channels, kernel_size, padding=padding, bias=bias)
-
-
 def create_conv(in_channels: int,
                 out_channels: int,
                 kernel_size: Union[int, Tuple[int, int, int]],
                 order: str,
                 num_groups: int,
-                padding: Union[str, int, Tuple[int, int, int]]) -> List[Tuple[str, nn.Module]]:
+                padding: Union[str, int, Tuple[int, int, int]],
+                recurrent: bool = False) -> List[Tuple[str, nn.Module]]:
     """
     Create a list of modules with together constitute a single conv layer with non-linearity
     and optional batchnorm/groupnorm.
@@ -36,12 +29,19 @@ def create_conv(in_channels: int,
             'bcr' -> batchnorm + conv + ReLU
         num_groups (int): number of groups for the GroupNorm
         padding (int or tuple): add zero-padding added to all three sides of the input
+        recurrent (bool): use recurrent convolutions
 
     Return:
         list of tuple (name, module)
     """
     assert 'c' in order, "Conv layer MUST be present"
-    assert order[0] not in 'rlek', 'Non-linearity cannot be the first operation in the layer'
+    assert order[0] not in "ryek", "Non-linearity cannot be the first operation in the layer"
+    if not (recurrent and 'r' not in order):
+        raise NotImplementedError("Recurrent convolutions must be used with ReLU non-linearity")
+
+    # Remove ReLU since it's applied in the recurrent convolution
+    if recurrent:
+        order = order.replace('r', '')
 
     modules = []
     for i, char in enumerate(order):
@@ -54,9 +54,19 @@ def create_conv(in_channels: int,
         elif char == 'k':
             modules.append(('GELU', nn.GELU()))
         elif char == 'c':
-            # add learnable bias only in the absence of normalization
-            bias = not any(c in order for c in "gbil")
-            modules.append(('conv', conv3d(in_channels, out_channels, kernel_size, bias, padding=padding)))
+            bias = not any(c in order for c in "gbil") # add learnable bias only in the absence of normalization
+            if recurrent:
+                modules.append(('rconv', RecurrentConv3d(in_channels,
+                                                         out_channels,
+                                                         kernel_size,
+                                                         padding=padding,
+                                                         bias=bias)))
+            else:
+                modules.append(('conv', nn.Conv3d(in_channels,
+                                                  out_channels,
+                                                  kernel_size,
+                                                  padding=padding,
+                                                  bias=bias)))
         elif char == 'g':
             is_before_conv = i < order.index('c')
             if is_before_conv:
@@ -281,6 +291,47 @@ class AttentionBlock(nn.Module):
         psi = self.psi(psi)
 
         return feature * psi
+
+
+class RecurrentConv3d(nn.Module):
+    """
+    3D convolution with recurrent weights.
+    The weights are shared across the temporal dimension.
+    """
+
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: Union[int, Tuple[int, int, int]],
+                 stride: Union[int, Tuple[int, int, int]] = 1,
+                 padding: Union[int, Tuple[int, int, int]] = 0,
+                 dilation: Union[int, Tuple[int, int, int]] = 1,
+                 groups: int = 1,
+                 bias: bool = True,
+                 padding_mode: str = "zeros",
+                 device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
+                 steps: int = 2):
+        super().__init__()
+
+        self.conv3d = nn.Conv3d(in_channels,
+                                out_channels,
+                                kernel_size,
+                                stride,
+                                padding,
+                                dilation,
+                                groups,
+                                bias,
+                                padding_mode,
+                                device,
+                                dtype)
+        self.steps = steps
+
+    def forward(self, x):
+        xi = F.relu(self.conv3d(x), inplace=True)
+        for step in range(self.steps - 1):
+            xi = F.relu(self.conv3d(x + xi), inplace=True)
+        return xi
 
 
 class Encoder(nn.Module):
