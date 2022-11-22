@@ -36,7 +36,7 @@ def create_conv(in_channels: int,
     """
     assert 'c' in order, "Conv layer MUST be present"
     assert order[0] not in "ryek", "Non-linearity cannot be the first operation in the layer"
-    if not (recurrent and 'r' not in order):
+    if recurrent and 'r' not in order:
         raise NotImplementedError("Recurrent convolutions must be used with ReLU non-linearity")
 
     # Remove ReLU since it's applied in the recurrent convolution
