@@ -380,7 +380,8 @@ class Decoder(nn.Module):
                 self.upsampling = TransposeConvUpsampling(in_channels=in_channels,
                                                           out_channels=out_channels,
                                                           kernel_size=conv_kernel_size,
-                                                          scale_factor=scale_factor)
+                                                          scale_factor=scale_factor,
+                                                          padding=padding)
                 # sum joining
                 self.joining = partial(self._joining, concat=False)
                 # adapt the number of in_channels for the ExtResNetBlock
@@ -550,13 +551,14 @@ class TransposeConvUpsampling(AbstractUpsampling):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: Union[int, Tuple[int, int, int]] = 3,
-                 scale_factor: Union[int, Tuple[int, int, int]] = (2, 2, 2)):
+                 scale_factor: Union[int, Tuple[int, int, int]] = (2, 2, 2),
+                 padding: Union[str, int, Tuple[int, int, int]] = 1):
         # make sure that the output size reverses the MaxPool3d from the corresponding encoder
         upsample = nn.ConvTranspose3d(in_channels,
                                       out_channels,
                                       kernel_size=kernel_size,
                                       stride=scale_factor,
-                                      padding=1)
+                                      padding=padding)
         super().__init__(upsample)
 
 
