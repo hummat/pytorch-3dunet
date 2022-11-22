@@ -378,18 +378,18 @@ class Decoder(nn.Module):
             # concat joining
             self.joining = partial(self._joining, concat=True)
 
-            if attention:
-                self.attention = AttentionBlock(out_channels)
-            else:
-                self.attention = None
+        if attention:
+            self.attention = AttentionBlock(out_channels)
+        else:
+            self.attention = None
 
-            self.basic_module = basic_module(in_channels,
-                                             out_channels,
-                                             encoder=False,
-                                             kernel_size=conv_kernel_size,
-                                             order=conv_layer_order,
-                                             num_groups=num_groups,
-                                             padding=padding)
+        self.basic_module = basic_module(in_channels,
+                                         out_channels,
+                                         encoder=False,
+                                         kernel_size=conv_kernel_size,
+                                         order=conv_layer_order,
+                                         num_groups=num_groups,
+                                         padding=padding)
 
     def forward(self, encoder_features, x):
         x = self.upsampling(encoder_features=encoder_features, x=x)
