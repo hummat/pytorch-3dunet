@@ -178,8 +178,8 @@ class UNet2D(Abstract3DUNet):
                  residual: bool = False,
                  attention: bool = False,
                  **kwargs: Any):
-        if conv_padding == 1:
-            conv_padding = (0, 1, 1)
+        if isinstance(conv_padding, int):
+            conv_padding = (0, conv_padding, conv_padding)
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
                          final_sigmoid=final_sigmoid,

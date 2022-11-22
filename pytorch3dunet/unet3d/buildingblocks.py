@@ -204,22 +204,34 @@ class ExtResNetBlock(nn.Module):
                  kernel_size: int = 3,
                  order: str = "cge",
                  num_groups: int = 8,
+                 padding: Union[str, int, Tuple[int, int, int]] = 1,
                  **kwargs):
         super().__init__()
 
         # first convolution
-        self.conv1 = SingleConv(in_channels, out_channels, kernel_size=kernel_size, order=order, num_groups=num_groups)
+        self.conv1 = SingleConv(in_channels,
+                                out_channels,
+                                kernel_size,
+                                order,
+                                num_groups,
+                                padding)
         # residual block
-        self.conv2 = SingleConv(out_channels, out_channels, kernel_size=kernel_size, order=order, num_groups=num_groups)
+        self.conv2 = SingleConv(out_channels,
+                                out_channels,
+                                kernel_size,
+                                order,
+                                num_groups,
+                                padding)
         # remove non-linearity from the 3rd convolution since it's going to be applied after adding the residual
         n_order = order
         for c in 'rel':
             n_order = n_order.replace(c, '')
         self.conv3 = SingleConv(out_channels,
                                 out_channels,
-                                kernel_size=kernel_size,
-                                order=n_order,
-                                num_groups=num_groups)
+                                kernel_size,
+                                n_order,
+                                num_groups,
+                                padding)
 
         # create non-linearity separately
         if 'l' in order:
