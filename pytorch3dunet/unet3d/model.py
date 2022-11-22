@@ -35,6 +35,7 @@ class Abstract3DUNet(nn.Module):
         pool_kernel_size (int or tuple): the size of the window
         conv_padding (int or tuple): add zero-padding added to all three sides of the input
         upsample_mode (str): upsampling mode, one of 'nearest', 'linear', 'bilinear', 'trilinear', 'area'
+        attention (bool): if True add attention module to the decoder path
     """
 
     def __init__(self,
@@ -51,6 +52,7 @@ class Abstract3DUNet(nn.Module):
                  pool_kernel_size: Union[int, Tuple[int, int, int]] = 2,
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  upsample_mode: str = "nearest",
+                 attention: bool = False,
                  **kwargs: Any):
         super().__init__()
 
@@ -78,7 +80,8 @@ class Abstract3DUNet(nn.Module):
                                         layer_order,
                                         num_groups,
                                         upsample_mode,
-                                        upsample=True)
+                                        upsample=True,
+                                        attention=attention)
 
         # in the last layer a 1×1 convolution reduces the number of output
         # channels to the number of labels
@@ -141,6 +144,7 @@ class UNet3D(Abstract3DUNet):
                  is_segmentation: bool = True,
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  residual: bool = False,
+                 attention: bool = False,
                  **kwargs: Any):
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
@@ -152,6 +156,7 @@ class UNet3D(Abstract3DUNet):
                          num_levels=num_levels,
                          is_segmentation=is_segmentation,
                          conv_padding=conv_padding,
+                         attention=attention,
                          **kwargs)
 
 
@@ -171,6 +176,7 @@ class UNet2D(Abstract3DUNet):
                  is_segmentation: bool = True,
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  residual: bool = False,
+                 attention: bool = False,
                  **kwargs: Any):
         if conv_padding == 1:
             conv_padding = (0, 1, 1)
@@ -186,6 +192,7 @@ class UNet2D(Abstract3DUNet):
                          conv_kernel_size=(1, 3, 3),
                          pool_kernel_size=(1, 2, 2),
                          conv_padding=conv_padding,
+                         attention=attention,
                          **kwargs)
 
 

@@ -2,7 +2,7 @@ from functools import partial
 from typing import Tuple, Union, List, Optional
 
 import torch
-from torch import nn as nn
+from torch import nn, Tensor
 from torch.nn import functional as F
 
 
@@ -243,6 +243,32 @@ class ExtResNetBlock(nn.Module):
         return out
 
 
+class AttentionBlock(nn.Module):
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int):
+        super().__init__()
+
+        self.W_g = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+
+        self.W_x = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+
+        self.psi = nn.Sequential(
+            nn.Conv2d(out_channels, 1, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.Sigmoid()
+        )
+
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, g: Tensor, x: Tensor) -> Tensor:
+        g = self.W_g(g)
+        x = self.W_x(x)
+        psi = self.relu(g + x)
+        psi = self.psi(psi)
+
+        return x * psi
+
+
 class Encoder(nn.Module):
     """
     A single module from the encoder path consisting of the optional max
@@ -331,7 +357,8 @@ class Decoder(nn.Module):
                  num_groups: int = 8,
                  upsample_mode: str = "nearest",
                  padding: Union[str, int, Tuple[int, int, int]] = 1,
-                 upsample: bool = True):
+                 upsample: bool = True,
+                 attention: bool = False):
         super().__init__()
 
         if upsample:
@@ -356,6 +383,11 @@ class Decoder(nn.Module):
             # concat joining
             self.joining = partial(self._joining, concat=True)
 
+        if attention:
+            self.attention = AttentionBlock(in_channels, in_channels)
+        else:
+            self.attention = nn.Identity()
+
         self.basic_module = basic_module(in_channels,
                                          out_channels,
                                          encoder=False,
@@ -366,6 +398,7 @@ class Decoder(nn.Module):
 
     def forward(self, encoder_features, x):
         x = self.upsampling(encoder_features=encoder_features, x=x)
+        x = self.attention(g=x, x=encoder_features)
         x = self.joining(encoder_features, x)
         x = self.basic_module(x)
         return x
@@ -421,7 +454,8 @@ def create_decoders(f_maps: Union[List[int], Tuple[int]],
                     layer_order: str,
                     num_groups: int,
                     upsample_mode: str,
-                    upsample: bool):
+                    upsample: bool,
+                    attention: bool) -> nn.ModuleList:
     # create decoder path consisting of the Decoder modules. The length of the decoder list is equal to `len(f_maps) - 1`
     decoders = []
     reversed_f_maps = list(reversed(f_maps))
@@ -441,14 +475,16 @@ def create_decoders(f_maps: Union[List[int], Tuple[int]],
             # upsampling can be skipped only for the 1st decoder, afterwards it should always be present
             _upsample = upsample
 
-        decoder = Decoder(in_feature_num, out_feature_num,
+        decoder = Decoder(in_channels=in_feature_num,
+                          out_channels=out_feature_num,
                           basic_module=basic_module,
                           conv_layer_order=layer_order,
                           conv_kernel_size=conv_kernel_size,
                           num_groups=num_groups,
                           upsample_mode=upsample_mode,
                           padding=conv_padding,
-                          upsample=_upsample)
+                          upsample=_upsample,
+                          attention=attention)
         decoders.append(decoder)
     return nn.ModuleList(decoders)
 
@@ -502,8 +538,8 @@ class TransposeConvUpsampling(AbstractUpsampling):
     """
 
     def __init__(self,
-                 in_channels: Optional[int] = None,
-                 out_channels: Optional[int] = None,
+                 in_channels: int,
+                 out_channels: int,
                  kernel_size: Union[int, Tuple[int, int, int]] = 3,
                  scale_factor: Union[int, Tuple[int, int, int]] = (2, 2, 2)):
         # make sure that the output size reverses the MaxPool3d from the corresponding encoder
