@@ -271,7 +271,7 @@ class ExtResNetBlock(nn.Module):
 
 
 class AttentionBlock(nn.Module):
-    """Following the paper: https://arxiv.org/pdf/1804.03999.pdf"""
+    """Following https://arxiv.org/abs/1804.03999"""
 
     def __init__(self, out_channels: int):
         super().__init__()
@@ -287,17 +287,12 @@ class AttentionBlock(nn.Module):
     def forward(self, gate: Tensor, feature: Tensor) -> Tensor:
         gate = self.W_gate(gate)
         feature = self.W_feat(feature)
-        psi = self.relu(gate + feature)
-        psi = self.psi(psi)
-
+        psi = self.psi(self.relu(gate + feature))
         return feature * psi
 
 
 class RecurrentConv3d(nn.Module):
-    """
-    3D convolution with recurrent weights.
-    The weights are shared across the temporal dimension.
-    """
+    """Following https://arxiv.org/abs/1802.06955."""
 
     def __init__(self,
                  in_channels: int,
@@ -311,10 +306,11 @@ class RecurrentConv3d(nn.Module):
                  padding_mode: str = "zeros",
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
-                 steps: int = 2):
+                 steps: int = 2,
+                 residual: bool = False):
         super().__init__()
 
-        self.conv3d = nn.Conv3d(in_channels,
+        self.conv3d = nn.Conv3d(out_channels,
                                 out_channels,
                                 kernel_size,
                                 stride,
@@ -325,13 +321,32 @@ class RecurrentConv3d(nn.Module):
                                 padding_mode,
                                 device,
                                 dtype)
+
+        if in_channels != out_channels:
+            self.conv3d_in = nn.Conv3d(in_channels,
+                                       out_channels,
+                                       kernel_size=1,
+                                       stride=stride,
+                                       padding=padding,
+                                       dilation=dilation,
+                                       groups=groups,
+                                       bias=bias,
+                                       padding_mode=padding_mode,
+                                       device=device,
+                                       dtype=dtype)
+        else:
+            self.conv3d_in = None
+
         self.steps = steps
+        self.residual = residual
 
     def forward(self, x):
+        if self.conv3d_in is not None:
+            x = self.conv3d_in(x)
         xi = F.relu(self.conv3d(x), inplace=True)
         for step in range(self.steps - 1):
             xi = F.relu(self.conv3d(x + xi), inplace=True)
-        return xi
+        return xi + x if self.residual else xi
 
 
 class Encoder(nn.Module):
