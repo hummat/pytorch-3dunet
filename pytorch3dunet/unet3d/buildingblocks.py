@@ -234,14 +234,16 @@ class ExtResNetBlock(nn.Module):
                                 padding)
 
         # create non-linearity separately
-        if 'l' in order:
-            self.non_linearity = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        if 'r' in order:
+            self.non_linearity = nn.ReLU(inplace=True)
+        elif 'y' in order:
+            self.non_linearity = nn.LeakyReLU(inplace=True)
         elif 'e' in order:
             self.non_linearity = nn.ELU(inplace=True)
         elif 'k' in order:
             self.non_linearity = nn.GELU()
         else:
-            self.non_linearity = nn.ReLU(inplace=True)
+            raise ValueError(f"No known non-linearity in the order string ({order}). Use one of 'r', 'y', 'e' or 'k'.")
 
     def forward(self, x):
         # apply first convolution and save the output as a residual
