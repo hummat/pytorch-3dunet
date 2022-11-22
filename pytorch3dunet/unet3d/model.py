@@ -35,7 +35,8 @@ class Abstract3DUNet(nn.Module):
         pool_kernel_size (int or tuple): the size of the window
         conv_padding (int or tuple): add zero-padding added to all three sides of the input
         upsample_mode (str): upsampling mode, one of 'nearest', 'linear', 'bilinear', 'trilinear', 'area'
-        attention (bool): if True add attention module to the decoder path
+        attention (bool): add attention module to the decoder path
+        recurrent (bool): use recurrent convolutions
     """
 
     def __init__(self,
@@ -53,6 +54,7 @@ class Abstract3DUNet(nn.Module):
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  upsample_mode: str = "nearest",
                  attention: bool = False,
+                 recurrent: bool = False,
                  **kwargs: Any):
         super().__init__()
 
@@ -70,7 +72,8 @@ class Abstract3DUNet(nn.Module):
                                         conv_padding,
                                         layer_order,
                                         num_groups,
-                                        pool_kernel_size)
+                                        pool_kernel_size,
+                                        recurrent)
 
         # create decoder path
         self.decoders = create_decoders(f_maps,
@@ -81,7 +84,8 @@ class Abstract3DUNet(nn.Module):
                                         num_groups,
                                         upsample_mode,
                                         upsample=True,
-                                        attention=attention)
+                                        attention=attention,
+                                        recurrent=recurrent)
 
         # in the last layer a 1×1 convolution reduces the number of output
         # channels to the number of labels
@@ -145,6 +149,7 @@ class UNet3D(Abstract3DUNet):
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  residual: bool = False,
                  attention: bool = False,
+                 recurrent: bool = False,
                  **kwargs: Any):
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
@@ -157,6 +162,7 @@ class UNet3D(Abstract3DUNet):
                          is_segmentation=is_segmentation,
                          conv_padding=conv_padding,
                          attention=attention,
+                         recurrent=recurrent,
                          **kwargs)
 
 
@@ -177,6 +183,7 @@ class UNet2D(Abstract3DUNet):
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
                  residual: bool = False,
                  attention: bool = False,
+                 recurrent: bool = False,
                  **kwargs: Any):
         if isinstance(conv_padding, int):
             conv_padding = (0, conv_padding, conv_padding)
@@ -193,6 +200,7 @@ class UNet2D(Abstract3DUNet):
                          pool_kernel_size=(1, 2, 2),
                          conv_padding=conv_padding,
                          attention=attention,
+                         recurrent=recurrent,
                          **kwargs)
 
 

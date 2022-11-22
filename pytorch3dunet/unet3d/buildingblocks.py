@@ -119,7 +119,8 @@ class SingleConv(nn.Sequential):
             'cl' -> conv + LeakyReLU
             'ce' -> conv + ELU
         num_groups (int): number of groups for the GroupNorm
-        padding (int or tuple):
+        padding (int or tuple): add zero-padding added to all three sides of the input
+        recurrent (bool): use recurrent convolutions
     """
 
     def __init__(self,
@@ -128,10 +129,17 @@ class SingleConv(nn.Sequential):
                  kernel_size: Union[int, Tuple[int, int, int]] = 3,
                  order: str = "gcr",
                  num_groups: int = 8,
-                 padding: Union[str, int, Tuple[int, int, int]] = 1):
+                 padding: Union[str, int, Tuple[int, int, int]] = 1,
+                 recurrent: bool = False):
         super().__init__()
 
-        for name, module in create_conv(in_channels, out_channels, kernel_size, order, num_groups, padding=padding):
+        for name, module in create_conv(in_channels,
+                                        out_channels,
+                                        kernel_size,
+                                        order,
+                                        num_groups,
+                                        padding,
+                                        recurrent):
             self.add_module(name, module)
 
 
@@ -156,6 +164,7 @@ class DoubleConv(nn.Sequential):
             'ce' -> conv + ELU
         num_groups (int): number of groups for the GroupNorm
         padding (int or tuple): add zero-padding added to all three sides of the input
+        recurrent (bool): use a recurrent convolution
     """
 
     def __init__(self,
@@ -165,7 +174,8 @@ class DoubleConv(nn.Sequential):
                  kernel_size: Union[int, Tuple[int, int, int]] = 3,
                  order: str = "gcr",
                  num_groups: int = 8,
-                 padding: Union[str, int, Tuple[int, int, int]] = 1):
+                 padding: Union[str, int, Tuple[int, int, int]] = 1,
+                 recurrent: bool = False):
         super().__init__()
 
         if encoder:
@@ -186,7 +196,8 @@ class DoubleConv(nn.Sequential):
                                    conv1_out_channels,
                                    kernel_size, order,
                                    num_groups,
-                                   padding=padding))
+                                   padding,
+                                   recurrent))
         # conv2
         self.add_module('SingleConv2',
                         SingleConv(conv2_in_channels,
@@ -194,7 +205,8 @@ class DoubleConv(nn.Sequential):
                                    kernel_size,
                                    order,
                                    num_groups,
-                                   padding=padding))
+                                   padding,
+                                   recurrent))
 
 
 class ExtResNetBlock(nn.Module):
@@ -215,6 +227,7 @@ class ExtResNetBlock(nn.Module):
                  order: str = "cge",
                  num_groups: int = 8,
                  padding: Union[str, int, Tuple[int, int, int]] = 1,
+                 recurrent: bool = False,
                  **kwargs):
         super().__init__()
 
@@ -224,14 +237,16 @@ class ExtResNetBlock(nn.Module):
                                 kernel_size,
                                 order,
                                 num_groups,
-                                padding)
+                                padding,
+                                recurrent)
         # residual block
         self.conv2 = SingleConv(out_channels,
                                 out_channels,
                                 kernel_size,
                                 order,
                                 num_groups,
-                                padding)
+                                padding,
+                                recurrent)
         # remove non-linearity from the 3rd convolution since it's going to be applied after adding the residual
         n_order = order
         for c in 'ryek':
@@ -241,7 +256,8 @@ class ExtResNetBlock(nn.Module):
                                 kernel_size,
                                 n_order,
                                 num_groups,
-                                padding)
+                                padding,
+                                recurrent)
 
         # create non-linearity separately
         if 'r' in order:
@@ -380,7 +396,8 @@ class Encoder(nn.Module):
                  basic_module: type(nn.Module) = DoubleConv,
                  conv_layer_order: str = "gcr",
                  num_groups: int = 8,
-                 padding: Union[str, int, Tuple[int, int, int]] = 1):
+                 padding: Union[str, int, Tuple[int, int, int]] = 1,
+                 recurrent: bool = False):
         super().__init__()
 
         assert pool_type in ["max", "avg"]
@@ -398,7 +415,8 @@ class Encoder(nn.Module):
                                          kernel_size=conv_kernel_size,
                                          order=conv_layer_order,
                                          num_groups=num_groups,
-                                         padding=padding)
+                                         padding=padding,
+                                         recurrent=recurrent)
 
     def forward(self, x):
         if self.pooling is not None:
@@ -438,7 +456,8 @@ class Decoder(nn.Module):
                  upsample_mode: str = "nearest",
                  padding: Union[str, int, Tuple[int, int, int]] = 1,
                  upsample: bool = True,
-                 attention: bool = False):
+                 attention: bool = False,
+                 recurrent: bool = False):
         super().__init__()
 
         if upsample:
@@ -475,7 +494,8 @@ class Decoder(nn.Module):
                                          kernel_size=conv_kernel_size,
                                          order=conv_layer_order,
                                          num_groups=num_groups,
-                                         padding=padding)
+                                         padding=padding,
+                                         recurrent=recurrent)
 
     def forward(self, encoder_features, x):
         x = self.upsampling(encoder_features=encoder_features, x=x)
@@ -500,7 +520,8 @@ def create_encoders(in_channels: int,
                     conv_padding: Union[str, int, Tuple[int, int, int]],
                     layer_order: str,
                     num_groups: int,
-                    pool_kernel_size: Union[int, Tuple[int, int, int]]) -> nn.ModuleList:
+                    pool_kernel_size: Union[int, Tuple[int, int, int]],
+                    recurrent: bool) -> nn.ModuleList:
     # create encoder path consisting of Encoder modules. Depth of the encoder is equal to `len(f_maps)`
     encoders = []
     for i, out_feature_num in enumerate(f_maps):
@@ -512,7 +533,8 @@ def create_encoders(in_channels: int,
                               conv_layer_order=layer_order,
                               conv_kernel_size=conv_kernel_size,
                               num_groups=num_groups,
-                              padding=conv_padding)
+                              padding=conv_padding,
+                              recurrent=recurrent)
         else:
             # TODO: adapt for anisotropy in the data, i.e. use proper pooling kernel to make the data isotropic after 1-2 pooling operations
             encoder = Encoder(in_channels=f_maps[i - 1],
@@ -522,7 +544,8 @@ def create_encoders(in_channels: int,
                               conv_kernel_size=conv_kernel_size,
                               num_groups=num_groups,
                               pool_kernel_size=pool_kernel_size,
-                              padding=conv_padding)
+                              padding=conv_padding,
+                              recurrent=recurrent)
 
         encoders.append(encoder)
 
@@ -537,7 +560,8 @@ def create_decoders(f_maps: Union[List[int], Tuple[int]],
                     num_groups: int,
                     upsample_mode: str,
                     upsample: bool,
-                    attention: bool) -> nn.ModuleList:
+                    attention: bool,
+                    recurrent: bool) -> nn.ModuleList:
     # create decoder path consisting of the Decoder modules. The length of the decoder list is equal to `len(f_maps) - 1`
     decoders = []
     reversed_f_maps = list(reversed(f_maps))
@@ -566,7 +590,8 @@ def create_decoders(f_maps: Union[List[int], Tuple[int]],
                           upsample_mode=upsample_mode,
                           padding=conv_padding,
                           upsample=_upsample,
-                          attention=attention)
+                          attention=attention,
+                          recurrent=recurrent)
         decoders.append(decoder)
     return nn.ModuleList(decoders)
 
