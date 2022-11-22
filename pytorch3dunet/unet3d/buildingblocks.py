@@ -224,7 +224,7 @@ class ExtResNetBlock(nn.Module):
                                 padding)
         # remove non-linearity from the 3rd convolution since it's going to be applied after adding the residual
         n_order = order
-        for c in 'rel':
+        for c in 'relk':
             n_order = n_order.replace(c, '')
         self.conv3 = SingleConv(out_channels,
                                 out_channels,
@@ -238,6 +238,8 @@ class ExtResNetBlock(nn.Module):
             self.non_linearity = nn.LeakyReLU(negative_slope=0.1, inplace=True)
         elif 'e' in order:
             self.non_linearity = nn.ELU(inplace=True)
+        elif 'k' in order:
+            self.non_linearity = nn.GELU()
         else:
             self.non_linearity = nn.ReLU(inplace=True)
 
