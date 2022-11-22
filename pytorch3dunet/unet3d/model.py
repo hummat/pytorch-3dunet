@@ -127,7 +127,7 @@ class UNet3D(Abstract3DUNet):
     `"3D U-Net: Learning Dense Volumetric Segmentation from Sparse Annotation"
         <https://arxiv.org/pdf/1606.06650.pdf>`.
 
-    Uses `DoubleConv` as a basic_module and nearest neighbor upsampling in the decoder
+    Uses `DoubleConv` or `ExtResNetBlock` as a basic_module and nearest neighbor upsampling in the decoder
     """
 
     def __init__(self,
@@ -140,43 +140,12 @@ class UNet3D(Abstract3DUNet):
                  num_levels: int = 4,
                  is_segmentation: bool = True,
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
+                 residual: bool = False,
                  **kwargs: Any):
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
                          final_sigmoid=final_sigmoid,
-                         basic_module=DoubleConv,
-                         f_maps=f_maps,
-                         layer_order=layer_order,
-                         num_groups=num_groups,
-                         num_levels=num_levels,
-                         is_segmentation=is_segmentation,
-                         conv_padding=conv_padding,
-                         **kwargs)
-
-
-class ResidualUNet3D(Abstract3DUNet):
-    """
-    Residual 3DUnet model implementation based on https://arxiv.org/pdf/1706.00120.pdf.
-    Uses ExtResNetBlock as a basic building block, summation joining instead
-    of concatenation joining and transposed convolutions for upsampling (watch out for block artifacts).
-    Since the model effectively becomes a residual net, in theory it allows for deeper UNet.
-    """
-
-    def __init__(self,
-                 in_channels: int,
-                 out_channels: int,
-                 final_sigmoid: bool = True,
-                 f_maps: int = 64,
-                 layer_order: str = "gcr",
-                 num_groups: int = 8,
-                 num_levels: int = 5,
-                 is_segmentation: bool = True,
-                 conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
-                 **kwargs: Any):
-        super().__init__(in_channels=in_channels,
-                         out_channels=out_channels,
-                         final_sigmoid=final_sigmoid,
-                         basic_module=ExtResNetBlock,
+                         basic_module=ExtResNetBlock if residual else DoubleConv,
                          f_maps=f_maps,
                          layer_order=layer_order,
                          num_groups=num_groups,
@@ -201,13 +170,14 @@ class UNet2D(Abstract3DUNet):
                  num_levels: int = 4,
                  is_segmentation: bool = True,
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
+                 residual: bool = False,
                  **kwargs: Any):
         if conv_padding == 1:
             conv_padding = (0, 1, 1)
         super().__init__(in_channels=in_channels,
                          out_channels=out_channels,
                          final_sigmoid=final_sigmoid,
-                         basic_module=DoubleConv,
+                         basic_module=ExtResNetBlock if residual else DoubleConv,
                          f_maps=f_maps,
                          layer_order=layer_order,
                          num_groups=num_groups,
