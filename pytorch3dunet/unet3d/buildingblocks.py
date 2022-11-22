@@ -203,7 +203,8 @@ class ExtResNetBlock(nn.Module):
                  out_channels: int,
                  kernel_size: int = 3,
                  order: str = "cge",
-                 num_groups: int = 8):
+                 num_groups: int = 8,
+                 **kwargs):
         super().__init__()
 
         # first convolution
