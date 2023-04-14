@@ -453,7 +453,7 @@ class Decoder(nn.Module):
                  basic_module: type(nn.Module) = DoubleConv,
                  conv_layer_order: str = "gcr",
                  num_groups: int = 8,
-                 upsample_mode: str = "trilinear",
+                 upsample_mode: str = "nearest",
                  padding: Union[str, int, Tuple[int, int, int]] = 1,
                  upsample: bool = True,
                  attention: bool = False,

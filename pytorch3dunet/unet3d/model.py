@@ -52,7 +52,7 @@ class Abstract3DUNet(nn.Module):
                  conv_kernel_size: Union[int, Tuple[int, int, int]] = 3,
                  pool_kernel_size: Union[int, Tuple[int, int, int]] = 2,
                  conv_padding: Union[str, int, Tuple[int, int, int]] = 1,
-                 upsample_mode: str = "nearest",
+                 upsample_mode: str = "trilinear",
                  attention: bool = False,
                  recurrent: bool = False,
                  **kwargs: Any):
