@@ -37,8 +37,7 @@ class AbstractUNet(nn.Module):
 
     def __init__(self, in_channels, out_channels, final_sigmoid, basic_module, f_maps=64, layer_order='gcr',
                  num_groups=8, num_levels=4, is_segmentation=True, conv_kernel_size=3, pool_kernel_size=2,
-                 conv_padding=1, mode='nearest', is3d=True, return_encoder_features=False,
-                 return_decoder_features=False, **kwargs):
+                 conv_padding=1, is3d=True, return_feature=False):
         super(AbstractUNet, self).__init__()
 
         if isinstance(f_maps, int):
@@ -55,7 +54,7 @@ class AbstractUNet(nn.Module):
 
         # create decoder path
         self.decoders = create_decoders(f_maps, basic_module, conv_kernel_size, conv_padding, layer_order, num_groups,
-                                        mode, is3d)
+                                        is3d)
 
         # in the last layer a 1×1 convolution reduces the number of output channels to the number of labels
         if is3d:
@@ -73,8 +72,7 @@ class AbstractUNet(nn.Module):
             # regression problem
             self.final_activation = None
 
-        self.return_encoder_features = return_encoder_features
-        self.return_decoder_features = return_decoder_features
+        self.return_feature = return_feature
 
     def forward(self, x):
         # encoder part
@@ -89,12 +87,10 @@ class AbstractUNet(nn.Module):
         encoders_features = encoders_features[1:]
 
         # decoder part
-        decoder_features = []
         for decoder, encoder_features in zip(self.decoders, encoders_features):
             # pass the output from the corresponding encoder and the output
             # of the previous decoder
             x = decoder(encoder_features, x)
-            decoder_features.append(x)
 
         x = self.final_conv(x)
 
@@ -103,12 +99,8 @@ class AbstractUNet(nn.Module):
         if not self.training and self.final_activation is not None:
             x = self.final_activation(x)
 
-        if self.return_encoder_features and self.return_decoder_features:
-            return x, encoders_features, decoder_features
-        if self.return_encoder_features:
+        if self.return_feature:
             return x, encoders_features
-        if self.return_decoder_features:
-            return x, decoder_features
         return x
 
 
@@ -133,8 +125,7 @@ class UNet3D(AbstractUNet):
                                      num_levels=num_levels,
                                      is_segmentation=is_segmentation,
                                      conv_padding=conv_padding,
-                                     is3d=True,
-                                     **kwargs)
+                                     is3d=True)
 
 
 class ResidualUNet3D(AbstractUNet):
@@ -157,8 +148,7 @@ class ResidualUNet3D(AbstractUNet):
                                              num_levels=num_levels,
                                              is_segmentation=is_segmentation,
                                              conv_padding=conv_padding,
-                                             is3d=True,
-                                             **kwargs)
+                                             is3d=True)
 
 
 class ResidualUNetSE3D(AbstractUNet):
@@ -183,8 +173,7 @@ class ResidualUNetSE3D(AbstractUNet):
                                                num_levels=num_levels,
                                                is_segmentation=is_segmentation,
                                                conv_padding=conv_padding,
-                                               is3d=True,
-                                               **kwargs)
+                                               is3d=True)
 
 
 class UNet2D(AbstractUNet):
@@ -205,8 +194,7 @@ class UNet2D(AbstractUNet):
                                      num_levels=num_levels,
                                      is_segmentation=is_segmentation,
                                      conv_padding=conv_padding,
-                                     is3d=False
-                                     **kwargs)
+                                     is3d=False)
 
 
 def get_model(model_config):
