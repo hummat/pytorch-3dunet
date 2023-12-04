@@ -205,7 +205,7 @@ class UNet2D(AbstractUNet):
                                      num_levels=num_levels,
                                      is_segmentation=is_segmentation,
                                      conv_padding=conv_padding,
-                                     is3d=False
+                                     is3d=False,
                                      **kwargs)
 
 
