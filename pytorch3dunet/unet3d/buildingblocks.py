@@ -35,11 +35,11 @@ def create_conv(in_channels, out_channels, kernel_size, order, num_groups, strid
     modules = []
     for i, char in enumerate(order):
         if char == 'r':
-            modules.append(('ReLU', nn.ReLU(inplace=True)))
+            modules.append(('ReLU', nn.ReLU(inplace=False)))
         elif char == 'l':
-            modules.append(('LeakyReLU', nn.LeakyReLU(inplace=True)))
+            modules.append(('LeakyReLU', nn.LeakyReLU(inplace=False)))
         elif char == 'e':
-            modules.append(('ELU', nn.ELU(inplace=True)))
+            modules.append(('ELU', nn.ELU(inplace=False)))
         elif char == 'c':
             # add learnable bias only in the absence of batchnorm/groupnorm
             bias = not ('g' in order or 'b' in order)
@@ -188,11 +188,11 @@ class ResNetBlock(nn.Module):
 
         # create non-linearity separately
         if 'l' in order:
-            self.non_linearity = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+            self.non_linearity = nn.LeakyReLU(negative_slope=0.1, inplace=False)
         elif 'e' in order:
-            self.non_linearity = nn.ELU(inplace=True)
+            self.non_linearity = nn.ELU(inplace=False)
         else:
-            self.non_linearity = nn.ReLU(inplace=True)
+            self.non_linearity = nn.ReLU(inplace=False)
 
     def forward(self, x):
         # apply first convolution to bring the number of channels to out_channels
